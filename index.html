@@ -1,0 +1,59 @@
+const form = document.getElementById('contactForm');
+const statusMessage = document.getElementById('statusMessage');
+
+// IMPORTANT: Replace this with your ACTUAL Make.com Webhook URL
+const makeWebhookUrl = 'https://hook.us2.make.com/nq3sb0v2ib1opur6hu3d1flllpd2dynd';
+
+form.addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent the default form submission (which would try to navigate)
+
+    // Show a loading/processing message (optional)
+    statusMessage.textContent = 'Sending...';
+    statusMessage.className = 'status-message'; // Reset classes
+    statusMessage.style.display = 'block';
+
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+    });
+
+    fetch(makeWebhookUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // Add any other headers Make.com might require, though usually not needed for basic JSON
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => {
+        if (response.ok) { // Check if response status is 200-299
+            // Make.com webhooks usually respond with a simple "Accepted" message (text/plain)
+            // or a JSON response if you've configured it that way.
+            // For a simple "Accepted" from Make.com:
+            return response.text().then(text => ({ok: true, data: text}));
+        } else {
+            // If the server responds with an error status, try to get more info
+            return response.json().catch(() => response.text()).then(errorData => {
+                throw new Error(errorData.message || errorData || `Request failed with status ${response.status}`);
+            });
+        }
+    })
+    .then(result => {
+        console.log('Success:', result.data);
+        statusMessage.textContent = 'Message sent successfully!';
+        statusMessage.className = 'status-message success';
+        form.reset(); // Clear the form fields
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        statusMessage.textContent = `Error: ${error.message || 'Could not send message. Please try again.'}`;
+        statusMessage.className = 'status-message error';
+    })
+    .finally(() => {
+        // Hide the status message after a few seconds (optional)
+        setTimeout(() => {
+            statusMessage.style.display = 'none';
+        }, 5000);
+    });
+});
