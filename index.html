@@ -1,59 +1,223 @@
-const form = document.getElementById('contactForm');
-const statusMessage = document.getElementById('statusMessage');
-
-// IMPORTANT: Replace this with your ACTUAL Make.com Webhook URL
-const makeWebhookUrl = 'https://hook.us2.make.com/nq3sb0v2ib1opur6hu3d1flllpd2dynd';
-
-form.addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent the default form submission (which would try to navigate)
-
-    // Show a loading/processing message (optional)
-    statusMessage.textContent = 'Sending...';
-    statusMessage.className = 'status-message'; // Reset classes
-    statusMessage.style.display = 'block';
-
-    const formData = new FormData(form);
-    const data = {};
-    formData.forEach((value, key) => {
-        data[key] = value;
-    });
-
-    fetch(makeWebhookUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            // Add any other headers Make.com might require, though usually not needed for basic JSON
-        },
-        body: JSON.stringify(data),
-    })
-    .then(response => {
-        if (response.ok) { // Check if response status is 200-299
-            // Make.com webhooks usually respond with a simple "Accepted" message (text/plain)
-            // or a JSON response if you've configured it that way.
-            // For a simple "Accepted" from Make.com:
-            return response.text().then(text => ({ok: true, data: text}));
-        } else {
-            // If the server responds with an error status, try to get more info
-            return response.json().catch(() => response.text()).then(errorData => {
-                throw new Error(errorData.message || errorData || `Request failed with status ${response.status}`);
-            });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details Form</title>
+    <style>
+        /* Basic Styling */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6; /* Light grayish blue */
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top to see start of form */
+            min-height: 100vh;
         }
-    })
-    .then(result => {
-        console.log('Success:', result.data);
-        statusMessage.textContent = 'Message sent successfully!';
-        statusMessage.className = 'status-message success';
-        form.reset(); // Clear the form fields
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-        statusMessage.textContent = `Error: ${error.message || 'Could not send message. Please try again.'}`;
-        statusMessage.className = 'status-message error';
-    })
-    .finally(() => {
-        // Hide the status message after a few seconds (optional)
-        setTimeout(() => {
-            statusMessage.style.display = 'none';
-        }, 5000);
-    });
-});
+        .container {
+            background-color: #ffffff; /* White */
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 700px; /* Max width for the form */
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #2c3e50; /* Dark blue */
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e; /* Slightly lighter blue */
+        }
+        input[type="text"],
+        input[type="email"],
+        textarea { /* Added textarea styling for consistency if you ever add one */
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 25px; /* Increased margin for better spacing */
+            border: 1px solid #bdc3c7; /* Light grey border */
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        input[type="text"]::placeholder,
+        input[type="email"]::placeholder,
+        textarea::placeholder {
+            color: #95a5a6; /* Lighter placeholder text */
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        textarea:focus {
+            border-color: #3498db; /* Blue border on focus */
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        button[type="submit"] {
+            background-color: #3498db; /* Bright blue */
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%; /* Full width button */
+            transition: background-color 0.3s ease;
+        }
+        button[type="submit"]:hover {
+            background-color: #2980b9; /* Darker blue on hover */
+        }
+        .status-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 15px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        /* Form field grouping */
+        .form-field {
+            margin-bottom: 20px; /* Consistent spacing between fields */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Project Inquiry</h1>
+
+        <form id="contactForm">
+            <div class="form-field">
+                <label for="Username">Please type in your name and your work industry</label>
+                <input type="text" id="Username" name="Username" placeholder="Eg. - Andrew - IT" required>
+            </div>
+
+            <div class="form-field">
+                <label for="Project">What is the project about?</label>
+                <input type="text" id="Project" name="Project" placeholder="Give product description - Whatever comes to your mind!" required>
+            </div>
+
+            <div class="form-field">
+                <label for="Demographics">Who are the target audience (Demographics)?</label>
+                <input type="text" id="Demographics" name="Demographics" placeholder="Define demographics, psychographics, buying patterns etc.!" required>
+            </div>
+
+            <div class="form-field">
+                <label for="Pain-Point">What is the pain point of the customer?</label>
+                <input type="text" id="Pain-Point" name="Pain-Point" placeholder="Based on your research and surveys, what is the major pain point you are focusing on?" required>
+            </div>
+
+            <div class="form-field">
+                <label for="Competitors">Who are the competitors</label>
+                <input type="text" id="Competitors" name="Competitors" placeholder="Give competitors name/website." required>
+            </div>
+
+            <div class="form-field">
+                <label for="USP">What is the product USP?</label>
+                <input type="text" id="USP" name="USP" placeholder="What is the product USP and pain-point to focus on?" required>
+            </div>
+
+            <div class="form-field">
+                <label for="KPIs">How will you measure success?</label>
+                <input type="text" id="KPIs" name="KPIs" placeholder="When will you celebrate?" required>
+            </div>
+
+            <div class="form-field">
+                <label for="Info">Any additional Information?</label>
+                <input type="text" id="Info" name="Info" placeholder="Anything else you want to share with us?" required>
+            </div>
+
+            <div class="form-field">
+                <label for="email">Your email address please</label>
+                <input type="email" id="email" name="email" placeholder="Where shall we send you final docs?" required>
+            </div>
+
+            <button type="submit">Submit Inquiry</button>
+        </form>
+        <div id="statusMessage" class="status-message" style="display: none;"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('contactForm');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // IMPORTANT: Replace this with your ACTUAL Make.com Webhook URL
+        const makeWebhookUrl = 'https://hook.us2.make.com/nq3sb0v2ib1opur6hu3d1flllpd2dynd';
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            statusMessage.textContent = 'Sending...';
+            statusMessage.className = 'status-message'; // Reset classes
+            statusMessage.style.display = 'block';
+
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            fetch(makeWebhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Assuming Make.com webhook responds with simple text like "Accepted" or a JSON success
+                    return response.text().then(text => ({ok: true, data: text}));
+                } else {
+                    // Try to parse error as JSON, fallback to text
+                    return response.json().catch(() => response.text()).then(errorData => {
+                        // Construct a meaningful error message
+                        let errorMessage = `Request failed with status ${response.status}`;
+                        if (typeof errorData === 'string') {
+                            errorMessage += `: ${errorData}`;
+                        } else if (errorData && errorData.message) {
+                            errorMessage += `: ${errorData.message}`;
+                        }
+                        throw new Error(errorMessage);
+                    });
+                }
+            })
+            .then(result => {
+                console.log('Success:', result.data); // Log the response from Make.com
+                statusMessage.textContent = 'Inquiry submitted successfully! We will get back to you via email.';
+                statusMessage.className = 'status-message success';
+                form.reset(); // Clear the form fields
+            })
+            .catch((error) => {
+                console.error('Error Object:', error);
+                statusMessage.textContent = `Error: ${error.message || 'Could not send inquiry. Please try again or contact support.'}`;
+                statusMessage.className = 'status-message error';
+            })
+            .finally(() => {
+                // Optionally hide the status message after some time
+                // setTimeout(() => {
+                //     statusMessage.style.display = 'none';
+                // }, 7000); // Keep it displayed a bit longer for user to read
+            });
+        });
+    </script>
+</body>
+</html>
